@@ -1,0 +1,15 @@
+{
+  "name": "purescript-aff-streams",
+  "version": "0.1.0",
+  "description": "Purescript Aff Streams based on AVars",
+  "email": "ben@flin.org",
+  "license": "MIT",
+  "scripts": {
+    "test": "yarn spago test"
+  },
+  "dependencies": {
+    "purescript": "^0.13.6",
+    "spago": "^0.13.1",
+    "yarn": "^1.21.1"
+  }
+}
