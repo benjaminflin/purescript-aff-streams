@@ -29,7 +29,7 @@ main = do
       fromFoldable [ x, x * 2 ]
   launchAff_ $ subscribe (liftEffect <<< log <<< show) s'
 ```
-to get 
+to yield
 ```
 1
 2
