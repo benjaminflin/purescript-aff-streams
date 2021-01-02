@@ -1,7 +1,7 @@
 module Data.AffStream where
 
 import Prelude
-import Control.Apply (lift2)
+import Control.MonadPlus (class Alt, class Alternative, class MonadPlus, class MonadZero, class Plus, guard)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), forever, tailRecM)
 import Control.Parallel (parOneOf)
 import Data.Array (snoc, (..))
@@ -40,11 +40,15 @@ instance bindStream :: Bind Stream where
 
 instance monadStream :: Monad Stream
 
-instance semigroupStream :: Semigroup (Stream a) where
-  append = merge
+instance altStream :: Alt Stream where
+  alt = merge 
 
-instance monoidStream :: Monoid (Stream a) where
-  mempty = empty
+instance plusStream :: Plus Stream where
+  empty = empty
+
+instance alternativeStream :: Alternative Stream
+instance monadZero :: MonadZero Stream
+instance monadPlus :: MonadPlus Stream
 
 instance monadEffectStream :: MonadEffect Stream where
   liftEffect eff = wrap $ AVar.new =<< liftEffect eff
@@ -115,16 +119,23 @@ fromFoldable f = foldl folder empty f
 merge :: forall a. Stream a -> Stream a -> Stream a
 merge a b = flatten $ fromFoldable [ a, b ]
 
+scan :: forall a b. (b -> a -> b) -> b -> Stream a -> Stream b
+scan f x0 s = fromCallback $ \emit -> tailRecM go { x: x0, emit }
+    where
+    go { x, emit } = do
+        a <- unwrap s >>= AVar.take 
+        let b = f x a
+        emit b
+        pure $ Loop { x: b, emit }
+
 flatten :: forall a. Stream (Stream a) -> Stream a
 flatten s = s >>= identity
-
-combineLatest :: forall a b c. (a -> b -> c) -> Stream a -> Stream b -> Stream c
-combineLatest = lift2
 
 filter :: forall a. (a -> Boolean) -> Stream a -> Stream a
 filter f s = do
   x <- s
-  if (f x) then pure x else empty
+  guard $ f x  
+  pure x 
 
 filterFlipped :: forall a. Stream a -> (a -> Boolean) -> Stream a
 filterFlipped = flip filter

@@ -1,6 +1,7 @@
 module Test.Main where
 
 import Prelude
+import Control.MonadPlus ((<|>), empty)
 import Data.AffStream (fromCallback, fromFoldable, recv, send, singleton, take, (<?>), (>>-))
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), delay, launchAff_)
@@ -138,14 +139,13 @@ streamSpec = do
 
           s = liftAff aff
         take 1 s >>= shouldEqual [ "foo" ]
-    describe "monoid" do
-      it "should follow identity" do
+    describe "monadplus" do
+      it "should have a well behaved neutral element" do
         let
           s = pure 1
         let
-          s' = s <> mempty
-
-          s'' = mempty <> s
+          s' = s <|> empty
+          s'' = empty <|> s
         take 1 s' >>= shouldEqual [ 1 ]
         take 1 s'' >>= shouldEqual [ 1 ]
       it "should be associative" do
@@ -156,16 +156,12 @@ streamSpec = do
                   delay $ Milliseconds ms
                   emit a
               )
-
           s = emitAfter 50.0 1
-
           s' = emitAfter 100.0 2
-
           s'' = emitAfter 150.0 3
+          l = (s <|> s') <|> s''
 
-          l = (s <> s') <> s''
-
-          r = s <> (s' <> s'')
+          r = s <|> (s' <|> s'')
         take 3 l >>= shouldEqual [ 1, 2, 3 ]
         take 3 r >>= shouldEqual [ 1, 2, 3 ]
     describe "switchMap" do
@@ -177,8 +173,6 @@ streamSpec = do
                   delay $ Milliseconds ms
                   emit a
               )
-
           s = fromFoldable [ 1, 2, 3 ]
-
           s' = s >>- (\x -> emitAfter 100.0 (x * 2))
         take 1 s' >>= shouldEqual [ 6 ]
