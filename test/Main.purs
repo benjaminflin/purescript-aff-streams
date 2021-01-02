@@ -2,7 +2,7 @@ module Test.Main where
 
 import Prelude
 import Control.MonadPlus ((<|>), empty)
-import Data.AffStream (fromCallback, fromFoldable, recv, send, singleton, take, (<?>), (>>-))
+import Data.AffStream (fromCallback, fromFoldable, recv, send, singleton, take, (<?>), (>>-), scan)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), delay, launchAff_)
 import Effect.Aff.AVar as AVar
@@ -176,3 +176,11 @@ streamSpec = do
           s = fromFoldable [ 1, 2, 3 ]
           s' = s >>- (\x -> emitAfter 100.0 (x * 2))
         take 1 s' >>= shouldEqual [ 6 ]
+    describe "scan" do
+      it "should keep track of a value across stream emissions" do
+        let 
+          s = fromFoldable [ 1, 2, 3 ]
+        let
+          s' = scan (+) 0 s
+        take 3 s' >>= shouldEqual [ 1, 3, 6 ]
+              

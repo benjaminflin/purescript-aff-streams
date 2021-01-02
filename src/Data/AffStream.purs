@@ -120,13 +120,15 @@ merge :: forall a. Stream a -> Stream a -> Stream a
 merge a b = flatten $ fromFoldable [ a, b ]
 
 scan :: forall a b. (b -> a -> b) -> b -> Stream a -> Stream b
-scan f x0 s = fromCallback $ \emit -> tailRecM go { x: x0, emit }
+scan f x0 s = fromCallback $ \emit -> do
+    v <- unwrap s
+    tailRecM go { x: x0, emit, v }
     where
-    go { x, emit } = do
-        a <- unwrap s >>= AVar.take 
+    go { x, emit, v } = do
+        a <- AVar.take v 
         let b = f x a
         emit b
-        pure $ Loop { x: b, emit }
+        pure $ Loop { x: b, emit, v }
 
 flatten :: forall a. Stream (Stream a) -> Stream a
 flatten s = s >>= identity
